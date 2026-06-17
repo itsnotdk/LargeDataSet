@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Edexcel Large Data Set Explorer</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2230;
+    --border: #30363d;
+    --accent: #58a6ff;
+    --accent2: #3fb950;
+    --accent3: #f78166;
+    --accent4: #d2a8ff;
+    --accent5: #ffa657;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --tag: #1f2937;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+
+  /* NAV */
+  nav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 1.5rem; display: flex; align-items: center; gap: 1.5rem; height: 52px; position: sticky; top: 0; z-index: 100; }
+  .nav-brand { font-weight: 700; font-size: 0.95rem; color: var(--accent); letter-spacing: -0.3px; white-space: nowrap; }
+  .nav-tabs { display: flex; gap: 0.25rem; overflow-x: auto; }
+  .nav-tab { background: none; border: none; color: var(--muted); font-size: 0.82rem; padding: 0.4rem 0.75rem; border-radius: 6px; cursor: pointer; white-space: nowrap; transition: all 0.15s; font-weight: 500; }
+  .nav-tab:hover { background: var(--surface2); color: var(--text); }
+  .nav-tab.active { background: var(--accent); color: #0d1117; }
+
+  /* HERO */
+  .hero { padding: 2rem 1.5rem 1rem; max-width: 1100px; margin: 0 auto; }
+  .hero-title { font-size: clamp(1.4rem, 4vw, 2.2rem); font-weight: 700; line-height: 1.2; }
+  .hero-title span { color: var(--accent); }
+  .hero-sub { color: var(--muted); font-size: 0.88rem; margin-top: 0.5rem; line-height: 1.5; }
+  .badge-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; }
+  .badge { background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; padding: 0.2rem 0.7rem; font-size: 0.75rem; color: var(--muted); }
+  .badge.uk { border-color: var(--accent); color: var(--accent); }
+  .badge.intl { border-color: var(--accent5); color: var(--accent5); }
+
+  /* PAGES */
+  .page { display: none; padding: 1rem 1.5rem 2rem; max-width: 1100px; margin: 0 auto; }
+  .page.active { display: block; }
+
+  /* SECTION HEADERS */
+  .section-header { margin-bottom: 1rem; margin-top: 1.5rem; }
+  .section-header:first-child { margin-top: 0; }
+  .section-title { font-size: 1rem; font-weight: 700; color: var(--text); }
+  .section-sub { font-size: 0.78rem; color: var(--muted); margin-top: 0.2rem; }
+
+  /* STAT GRID */
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 0.75rem; margin-bottom: 1rem; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.9rem 1rem; }
+  .stat-label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-value { font-size: 1.5rem; font-weight: 700; margin-top: 0.25rem; }
+  .stat-unit { font-size: 0.72rem; color: var(--muted); }
+  .stat-delta { font-size: 0.75rem; margin-top: 0.3rem; }
+  .delta-up { color: var(--accent3); }
+  .delta-dn { color: var(--accent2); }
+
+  /* INFO BOX */
+  .info-box { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 8px; padding: 0.85rem 1rem; margin-bottom: 1rem; font-size: 0.82rem; line-height: 1.6; color: var(--muted); }
+  .info-box strong { color: var(--text); }
+  .info-box.green { border-left-color: var(--accent2); }
+  .info-box.orange { border-left-color: var(--accent5); }
+  .info-box.purple { border-left-color: var(--accent4); }
+
+  /* CONTROLS */
+  .controls { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 1rem; align-items: center; }
+  .ctrl-label { font-size: 0.78rem; color: var(--muted); }
+  .toggle-group { display: flex; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .toggle-btn { background: none; border: none; color: var(--muted); font-size: 0.78rem; padding: 0.35rem 0.8rem; cursor: pointer; transition: all 0.15s; }
+  .toggle-btn.active { background: var(--accent); color: #0d1117; font-weight: 600; }
+  select { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 0.35rem 0.65rem; border-radius: 6px; font-size: 0.78rem; cursor: pointer; }
+
+  /* CHART CONTAINERS */
+  .chart-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; margin-bottom: 1rem; }
+  .chart-title { font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 0.75rem; }
+  .chart-hint { font-size: 0.72rem; color: var(--muted); margin-top: 0.5rem; }
+  .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+  @media (max-width: 640px) { .chart-row { grid-template-columns: 1fr; } }
+  canvas { max-height: 280px; }
+
+  /* COMPARISON TABLE */
+  .comp-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+  .comp-table th { background: var(--surface2); color: var(--muted); font-weight: 600; text-align: left; padding: 0.6rem 0.8rem; border-bottom: 1px solid var(--border); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.3px; }
+  .comp-table td { padding: 0.55rem 0.8rem; border-bottom: 1px solid var(--border); color: var(--text); }
+  .comp-table tr:hover td { background: var(--surface2); }
+  .pill { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 600; }
+  .pill-blue { background: rgba(88,166,255,0.15); color: var(--accent); }
+  .pill-green { background: rgba(63,185,80,0.15); color: var(--accent2); }
+  .pill-red { background: rgba(247,129,102,0.15); color: var(--accent3); }
+  .pill-orange { background: rgba(255,166,87,0.15); color: var(--accent5); }
+
+  /* KEY FACTS */
+  .facts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0.75rem; }
+  .fact-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1rem; }
+  .fact-q { font-size: 0.78rem; color: var(--muted); margin-bottom: 0.4rem; }
+  .fact-a { font-size: 0.9rem; font-weight: 600; color: var(--text); line-height: 1.4; }
+  .fact-tip { font-size: 0.72rem; color: var(--accent); margin-top: 0.4rem; }
+
+  /* GLOSSARY */
+  .glossary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.6rem; }
+  .glossary-item { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 0.8rem; }
+  .glossary-term { font-size: 0.82rem; font-weight: 700; color: var(--accent); margin-bottom: 0.3rem; }
+  .glossary-def { font-size: 0.75rem; color: var(--muted); line-height: 1.5; }
+  .glossary-unit { font-size: 0.7rem; color: var(--accent5); margin-top: 0.2rem; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-brand">📊 LDS Explorer</div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showPage('overview')">Overview</button>
+    <button class="nav-tab" onclick="showPage('cloud')">☁️ Cloud</button>
+    <button class="nav-tab" onclick="showPage('temp')">🌡️ Temp</button>
+    <button class="nav-tab" onclick="showPage('rain')">🌧️ Rain</button>
+    <button class="nav-tab" onclick="showPage('sunshine')">☀️ Sunshine</button>
+    <button class="nav-tab" onclick="showPage('compare')">⚖️ Compare</button>
+    <button class="nav-tab" onclick="showPage('examtips')">📝 Exam Tips</button>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-title">Edexcel <span>Large Data Set</span></div>
+  <div class="hero-sub">Weather data from 8 stations · May–Oct 1987 vs 2015 · Met Office data</div>
+  <div class="badge-row">
+    <span class="badge uk">🇬🇧 Camborne</span>
+    <span class="badge uk">🇬🇧 Heathrow</span>
+    <span class="badge uk">🇬🇧 Hurn</span>
+    <span class="badge uk">🇬🇧 Leeming</span>
+    <span class="badge uk">🇬🇧 Leuchars</span>
+    <span class="badge intl">🇨🇳 Beijing</span>
+    <span class="badge intl">🇺🇸 Jacksonville</span>
+    <span class="badge intl">🇦🇺 Perth</span>
+  </div>
+</div>
+
+<!-- ===== OVERVIEW PAGE ===== -->
+<div id="page-overview" class="page active">
+  <div class="info-box">
+    <strong>What is the LDS?</strong> The Pearson Edexcel Large Data Set contains daily weather observations from 5 UK and 3 overseas Met Office stations. You need to be <strong>familiar with its structure, variables, and quirks</strong> before your exam — questions will reference it directly.
+  </div>
+
+  <div class="section-header">
+    <div class="section-title">Mean Temperature by Station (May–Oct)</div>
+    <div class="section-sub">Comparing 1987 and 2015 averages across all 8 stations</div>
+  </div>
+  <div class="chart-wrap">
+    <canvas id="chartOverviewTemp"></canvas>
+    <div class="chart-hint">📌 Note: all stations warmer in 2015 than 1987 — useful for hypothesis testing questions.</div>
+  </div>
+
+  <div class="chart-row">
+    <div class="chart-wrap">
+      <div class="chart-title">Mean Daily Rainfall (mm) — 1987 vs 2015</div>
+      <canvas id="chartOverviewRain"></canvas>
+    </div>
+    <div class="chart-wrap">
+      <div class="chart-title">Mean Windspeed (kn) — 1987 vs 2015</div>
+      <canvas id="chartOverviewWind"></canvas>
+    </div>
+  </div>
+
+  <div class="section-header">
+    <div class="section-title">Data Set Structure</div>
+  </div>
+  <div class="glossary-grid">
+    <div class="glossary-item"><div class="glossary-term">Daily Mean Temp</div><div class="glossary-def">Average of hourly readings 0900–0900 GMT</div><div class="glossary-unit">°C</div></div>
+    <div class="glossary-item"><div class="glossary-term">Total Rainfall</div><div class="glossary-def">Cumulative rainfall in 24h window 0900–0900</div><div class="glossary-unit">mm · "tr" = trace (&lt;0.05mm)</div></div>
+    <div class="glossary-item"><div class="glossary-term">Total Sunshine</div><div class="glossary-def">Hours of bright sunshine 0000–2400</div><div class="glossary-unit">hrs · not in 1987!</div></div>
+    <div class="glossary-item"><div class="glossary-term">Cloud Cover</div><div class="glossary-def">Mean total cloud cover on scale 0–8</div><div class="glossary-unit">oktas · 0=clear, 8=overcast</div></div>
+    <div class="glossary-item"><div class="glossary-term">Wind Direction</div><div class="glossary-def">Direction wind blows FROM, in degrees</div><div class="glossary-unit">° (+ Cardinal: N/S/NW etc.)</div></div>
+    <div class="glossary-item"><div class="glossary-term">Max Gust</div><div class="glossary-def">Highest instantaneous wind speed in 24h</div><div class="glossary-unit">knots (kn)</div></div>
+    <div class="glossary-item"><div class="glossary-term">Relative Humidity</div><div class="glossary-def">Max % of water vapour air can hold</div><div class="glossary-unit">% (UK stations only)</div></div>
+    <div class="glossary-item"><div class="glossary-term">Visibility</div><div class="glossary-def">Mean horizontal visibility</div><div class="glossary-unit">decametres (dam) · UK only</div></div>
+    <div class="glossary-item"><div class="glossary-term">Mean Pressure</div><div class="glossary-def">Atmospheric pressure averaged over the day</div><div class="glossary-unit">hPa</div></div>
+    <div class="glossary-item"><div class="glossary-term">n/a value</div><div class="glossary-def">Data not available — treat as missing, not 0</div><div class="glossary-unit">⚠️ Exam trap!</div></div>
+    <div class="glossary-item"><div class="glossary-term">tr value</div><div class="glossary-def">"Trace" rainfall — too small to measure accurately</div><div class="glossary-unit">Treat as 0 unless told otherwise</div></div>
+    <div class="glossary-item"><div class="glossary-term">Overseas sheets</div><div class="glossary-def">Fewer variables: no cloud, humidity, visibility or sunshine</div><div class="glossary-unit">Beijing, Jacksonville, Perth</div></div>
+  </div>
+</div>
+
+<!-- ===== CLOUD PAGE ===== -->
+<div id="page-cloud" class="page">
+  <div class="info-box purple">
+    <strong>Cloud Cover (oktas):</strong> Measured on a scale of <strong>0–8 oktas</strong>. 0 = completely clear sky. 8 = fully overcast. Only available for the <strong>5 UK stations</strong>. Not recorded for Beijing, Jacksonville, or Perth.
+  </div>
+
+  <div class="section-header">
+    <div class="section-title">Mean Cloud Cover by UK Station</div>
+    <div class="section-sub">May–October averages in oktas (0–8 scale)</div>
+  </div>
+  <div class="chart-wrap">
+    <canvas id="chartCloud1987v2015"></canvas>
+    <div class="chart-hint">All UK stations have high mean cloud cover (5–6 oktas = mostly cloudy). Leuchars (Scotland) is consistently the cloudiest.</div>
+  </div>
+
+  <div class="controls">
+    <span class="ctrl-label">Month:</span>
+    <div class="toggle-group">
+      <button class="toggle-btn active" onclick="setCloudMonth(5, this)">May</button>
+      <button class="toggle-btn" onclick="setCloudMonth(6, this)">Jun</button>
+      <button class="toggle-btn" onclick="setCloudMonth(7, this)">Jul</button>
+      <button class="toggle-btn" onclick="setCloudMonth(8, this)">Aug</button>
+      <button class="toggle-btn" onclick="setCloudMonth(9, this)">Sep</button>
+      <button class="toggle-btn" onclick="setCloudMonth(10, this)">Oct</button>
+    </div>
+  </div>
+
+  <div class="chart-row">
+    <div class="chart-wrap">
+      <div class="chart-title">1987 — Cloud by Month</div>
+      <canvas id="chartCloud1987monthly"></canvas>
+    </div>
+    <div class="chart-wrap">
+      <div class="chart-title">2015 — Cloud by Month</div>
+      <canvas id="chartCloud2015monthly"></canvas>
+    </div>
+  </div>
+
+  <div class="info-box green">
+    <strong>Exam connection:</strong> Cloud cover and sunshine hours are <strong>negatively correlated</strong> — more cloud → less sunshine. You might be asked to calculate a correlation coefficient (PMCC) between these two variables.
+  </div>
+
+  <div class="chart-wrap">
+    <div class="chart-title">Cloud Cover Comparison — All UK Stations (Monthly Mean, 2015)</div>
+    <canvas id="chartCloudRadar"></canvas>
+    <div class="chart-hint">Radar chart: outer = high cloud, inner = low cloud. Notice Leeming & Leuchars tend to sit outermost (cloudier).</div>
+  </div>
+</div>
+
+<!-- ===== TEMP PAGE ===== -->
+<div id="page-temp" class="page">
+  <div class="info-box">
+    <strong>Temperature:</strong> Recorded in °C. Daily mean = average of hourly readings 0900–0900 GMT. All 8 stations record temperature, making it the best variable for <strong>comparing UK vs overseas</strong>.
+  </div>
+
+  <div class="section-header">
+    <div class="section-title">Monthly Temperature Profiles — All Stations</div>
+    <div class="section-sub">Toggle between 1987 and 2015</div>
+  </div>
+  <div class="controls">
+    <div class="toggle-group">
+      <button class="toggle-btn active" onclick="setTempYear('1987', this)">1987</button>
+      <button class="toggle-btn" onclick="setTempYear('2015', this)">2015</button>
+      <button class="toggle-btn" onclick="setTempYear('both', this)">Both</button>
+    </div>
+    <div class="toggle-group">
+      <button class="toggle-btn active" onclick="setTempGroup('uk', this)">🇬🇧 UK</button>
+      <button class="toggle-btn" onclick="setTempGroup('intl', this)">🌍 Overseas</button>
+      <button class="toggle-btn" onclick="setTempGroup('all', this)">All</button>
+    </div>
+  </div>
+  <div class="chart-wrap">
+    <canvas id="chartTempLine"></canvas>
+    <div class="chart-hint">Perth (Australia) peaks Oct–Nov — opposite season. Jacksonville & Beijing far warmer in summer. Leuchars (Scotland) is coldest UK station.</div>
+  </div>
+
+  <div class="section-header">
+    <div class="section-title">Temperature Change 1987 → 2015</div>
+    <div class="section-sub">Mean temperature difference (positive = warmer in 2015)</div>
+  </div>
+  <div class="chart-wrap">
+    <canvas id="chartTempDelta"></canvas>
+    <div class="chart-hint">All stations show positive change — consistent with global warming narrative. Heathrow shows the largest UK increase (+0.98°C).</div>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat-card"><div class="stat-label">Hottest Mean</div><div class="stat-value" style="color:var(--accent3)">25.0°C</div><div class="stat-unit">Jacksonville 2015</div></div>
+    <div class="stat-card"><div class="stat-label">Coolest Mean</div><div class="stat-value" style="color:var(--accent)">11.6°C</div><div class="stat-unit">Leuchars 1987</div></div>
+    <div class="stat-card"><div class="stat-label">Biggest ΔTemp</div><div class="stat-value" style="color:var(--accent5)">+1.13°C</div><div class="stat-unit">Heathrow 87→15</div></div>
+    <div class="stat-card"><div class="stat-label">Perth Pattern</div><div class="stat-value" style="color:var(--accent4)">↓ Jul</div><div class="stat-unit">Southern hemisphere winter</div></div>
+  </div>
+</div>
+
+<!-- ===== RAIN PAGE ===== -->
+<div id="page-rain" class="page">
+  <div class="info-box orange">
+    <strong>Rainfall:</strong> Measured 0900–0900 as total in mm. <strong>"tr"</strong> = trace amount (treat as 0 in calculations unless instructed otherwise). <strong>"n/a"</strong> = no data — exclude these from any mean calculation.
+  </div>
+
+  <div class="section-header">
+    <div class="section-title">Mean Daily Rainfall by Station & Month</div>
+  </div>
+  <div class="controls">
+    <div class="toggle-group">
+      <button class="toggle-btn active" onclick="setRainYear('1987', this)">1987</button>
+      <button class="toggle-btn" onclick="setRainYear('2015', this)">2015</button>
+    </div>
+  </div>
+  <div class="chart-wrap">
+    <canvas id="chartRainBar"></canvas>
+    <div class="chart-hint">Perth & Jacksonville have different seasonal patterns: Perth is wettest in May–Jul (southern hemisphere winter), Jacksonville peaks Sep (hurricane season).</div>
+  </div>
+
+  <div class="chart-row">
+    <div class="chart-wrap">
+      <div class="chart-title">UK Rainfall Distribution — Boxplot Summary</div>
+      <canvas id="chartRainUK"></canvas>
+    </div>
+    <div class="chart-wrap">
+      <div class="chart-title">Overseas vs UK Mean Rainfall</div>
+      <canvas id="chartRainGlobal"></canvas>
+    </div>
+  </div>
+
+  <div class="info-box green">
+    <strong>Exam connection:</strong> Rainfall is often used for <strong>hypothesis testing</strong> (e.g. "test whether mean daily rainfall in Hurn is greater than 2mm at 5% significance"). Remember to state H₀ and H₁ clearly.
+  </div>
+</div>
+
+<!-- ===== SUNSHINE PAGE ===== -->
+<div id="page-sunshine" class="page">
+  <div class="info-box">
+    <strong>Sunshine Hours:</strong> Only available for <strong>2015 data</strong> in the UK stations. <strong>Not recorded in 1987</strong> — a key LDS fact to remember. Measured 0000–2400 in hours.
+  </div>
+
+  <div class="section-header">
+    <div class="section-title">Mean Daily Sunshine Hours — UK Stations 2015</div>
+  </div>
+  <div class="chart-wrap">
+    <canvas id="chartSunshine"></canvas>
+    <div class="chart-hint">Heathrow (south) gets slightly more sunshine than Leuchars (Scotland). June is peak sunshine month.</div>
+  </div>
+
+  <div class="chart-wrap">
+    <div class="chart-title">Sunshine vs Cloud — Negative Correlation (2015 Monthly Means)</div>
+    <canvas id="chartSunVsCloud"></canvas>
+    <div class="chart-hint">Select a station to see the relationship between cloud (oktas) and sunshine (hrs). Negative correlation expected — more cloud = less sun.</div>
+  </div>
+  <div class="controls" style="margin-top:0.5rem">
+    <select id="sunCloudStation" onchange="updateSunVsCloud()">
+      <option value="Camborne">Camborne</option>
+      <option value="Heathrow">Heathrow</option>
+      <option value="Hurn">Hurn</option>
+      <option value="Leeming">Leeming</option>
+      <option value="Leuchars">Leuchars</option>
+    </select>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat-card"><div class="stat-label">Sunniest Mean</div><div class="stat-value" style="color:var(--accent5)">5.49</div><div class="stat-unit">hrs/day — Hurn 2015</div></div>
+    <div class="stat-card"><div class="stat-label">Least Sunny</div><div class="stat-value" style="color:var(--muted)">3.87</div><div class="stat-unit">hrs/day — Leeming 1987*</div></div>
+    <div class="stat-card"><div class="stat-label">Not in 1987</div><div class="stat-value" style="color:var(--accent3)">⚠️</div><div class="stat-unit">Sunshine not recorded in 1987 LDS</div></div>
+    <div class="stat-card"><div class="stat-label">Peak Month</div><div class="stat-value" style="color:var(--accent)">June</div><div class="stat-unit">Longest days → most sunshine</div></div>
+  </div>
+</div>
+
+<!-- ===== COMPARE PAGE ===== -->
+<div id="page-compare" class="page">
+  <div class="section-header">
+    <div class="section-title">Full Station Comparison Table</div>
+    <div class="section-sub">Mean values across May–Oct period (UK: all variables · Overseas: temp, rain, wind, pressure)</div>
+  </div>
+  <div style="overflow-x:auto">
+    <table class="comp-table">
+      <thead>
+        <tr>
+          <th>Station</th>
+          <th>Year</th>
+          <th>Type</th>
+          <th>Mean Temp °C</th>
+          <th>SD Temp</th>
+          <th>Daily Rain mm</th>
+          <th>Sunshine hrs</th>
+          <th>Cloud oktas</th>
+          <th>Humidity %</th>
+          <th>Wind kn</th>
+          <th>Pressure hPa</th>
+        </tr>
+      </thead>
+      <tbody id="compareTableBody"></tbody>
+    </table>
+  </div>
+
+  <div class="section-header" style="margin-top:1.5rem">
+    <div class="section-title">Correlation Quick-Look: Cloud vs Sunshine</div>
+    <div class="section-sub">UK stations 2015 — negative relationship expected</div>
+  </div>
+  <div class="chart-wrap">
+    <canvas id="chartScatterCloud"></canvas>
+    <div class="chart-hint">Each point = one station's monthly mean. Negative correlation visible — more cloud cover (oktas) associates with fewer sunshine hours.</div>
+  </div>
+</div>
+
+<!-- ===== EXAM TIPS PAGE ===== -->
+<div id="page-examtips" class="page">
+  <div class="info-box">
+    <strong>Exam tip:</strong> You're expected to be <strong>familiar</strong> with the LDS — you don't get the full dataset in the exam, but questions reference specific variables, stations, and patterns you should already know.
+  </div>
+
+  <div class="section-header"><div class="section-title">Key Facts to Know</div></div>
+  <div class="facts-grid">
+    <div class="fact-card"><div class="fact-q">What years does the LDS cover?</div><div class="fact-a">May–October 1987 and May–October 2015</div><div class="fact-tip">📌 Only May–October — not a full year!</div></div>
+    <div class="fact-card"><div class="fact-q">How many stations? Which type?</div><div class="fact-a">8 stations total: 5 UK (Camborne, Heathrow, Hurn, Leeming, Leuchars) + 3 overseas (Beijing, Jacksonville, Perth)</div></div>
+    <div class="fact-card"><div class="fact-q">What does "tr" mean in rainfall?</div><div class="fact-a">Trace — rainfall too small to measure accurately. Treat as 0 in calculations unless told otherwise.</div><div class="fact-tip">📌 Don't ignore it!</div></div>
+    <div class="fact-card"><div class="fact-q">What does "n/a" mean?</div><div class="fact-a">Data not available. Exclude these values from any mean/SD calculation — not the same as zero.</div><div class="fact-tip">📌 Classic exam trap</div></div>
+    <div class="fact-card"><div class="fact-q">Which variable is NOT in 1987?</div><div class="fact-a">Sunshine hours — only recorded in the 2015 dataset.</div><div class="fact-tip">📌 Can't compare sunshine across years!</div></div>
+    <div class="fact-card"><div class="fact-q">Which variables are UK-only?</div><div class="fact-a">Cloud cover (oktas), relative humidity (%), visibility (dam), sunshine hours, max gust, wind direction</div></div>
+    <div class="fact-card"><div class="fact-q">What is an "okta"?</div><div class="fact-a">Unit for cloud cover. Scale 0–8. 0 = clear sky, 8 = completely overcast (8/8 covered).</div></div>
+    <div class="fact-card"><div class="fact-q">What unit is visibility in?</div><div class="fact-a">Decametres (dam) — 1 dam = 10 metres. So 1000 dam = 10 km visibility.</div><div class="fact-tip">📌 Not metres or km!</div></div>
+    <div class="fact-card"><div class="fact-q">Which UK station is furthest north?</div><div class="fact-a">Leuchars (Scotland, 56.38°N) — consistently the coldest and cloudiest UK station.</div></div>
+    <div class="fact-card"><div class="fact-q">Why is Perth unusual?</div><div class="fact-a">Southern hemisphere — its seasons are reversed. May–Oct = Australian autumn/winter, so temperatures FALL then RISE (opposite to UK).</div><div class="fact-tip">📌 Great exam discussion point</div></div>
+    <div class="fact-card"><div class="fact-q">What is PMCC used for here?</div><div class="fact-a">Testing correlation between two variables, e.g. cloud cover vs sunshine, or temperature vs rainfall. Use the t-test for significance.</div></div>
+    <div class="fact-card"><div class="fact-q">Hypothesis test structure?</div><div class="fact-a">State H₀ (e.g. μ = 3mm), H₁ (μ > 3mm), significance level, test statistic, compare to critical value, conclude in context.</div></div>
+  </div>
+
+  <div class="section-header" style="margin-top:1.5rem"><div class="section-title">Common Exam Question Types</div></div>
+  <div class="info-box">
+    <strong>1. Summary statistics</strong> — Calculate mean, median, variance, SD, IQR from a sample of LDS data. Watch for "tr" and "n/a" values.
+  </div>
+  <div class="info-box green">
+    <strong>2. Hypothesis testing</strong> — Test a claim about a population mean using the LDS sample. E.g. "Test at 5% whether mean daily sunshine in Leeming 2015 exceeds 4 hours."
+  </div>
+  <div class="info-box orange">
+    <strong>3. Correlation / regression</strong> — PMCC between two weather variables. Scatter diagrams, regression lines, interpretation in context.
+  </div>
+  <div class="info-box purple">
+    <strong>4. Sampling</strong> — Stratified, systematic, or random samples from the LDS. Calculate sample sizes proportional to months or stations.
+  </div>
+  <div class="info-box">
+    <strong>5. Cleaning data</strong> — Identify and deal with "tr", "n/a", outliers. Explain what to do with missing data before calculating statistics.
+  </div>
+
+  <div class="section-header" style="margin-top:1.5rem"><div class="section-title">Video Resource</div></div>
+  <div class="fact-card" style="max-width:500px">
+    <div class="fact-q">📹 Recommended Watch</div>
+    <div class="fact-a">Large Data Set Introduction</div>
+    <div class="fact-tip">
+      <a href="https://www.youtube.com/watch?v=g2GiZkWVPBs" target="_blank" style="color:var(--accent);text-decoration:none">
+        ▶ Watch on YouTube →
+      </a>
+    </div>
+  </div>
+</div>
+
+<script>
+// ========================
+// DATA
+// ========================
+const D = {
+  stations: ['Camborne','Heathrow','Hurn','Leeming','Leuchars','Beijing','Jacksonville','Perth'],
+  ukStations: ['Camborne','Heathrow','Hurn','Leeming','Leuchars'],
+  intlStations: ['Beijing','Jacksonville','Perth'],
+  months: [5,6,7,8,9,10],
+  monthNames: ['May','Jun','Jul','Aug','Sep','Oct'],
+
+  data: {
+    'Camborne': {
+      1987: { temp:13.4, tempStd:2.73, rain:3.23, sunshine:5.41, cloud:5.7, humidity:93.73, wind:9.04, pressure:1015.49,
+        monthlyTemp:{5:10.53,6:12.54,7:15.6,8:15.84,9:14.52,10:10.85},
+        monthlyRain:{5:1.53,6:3.59,7:1.58,8:1.26,9:2.15,10:8.22},
+        monthlyCloud:{5:5.24,6:6.7,7:5.32,8:5.45,9:5.9,10:5.52},
+        monthlySun:{5:6.11,6:4.09,7:7.43,8:6.9,9:4.18,10:3.94}},
+      2015: { temp:13.75, tempStd:2.02, rain:3.33, sunshine:5.3, cloud:5.79, humidity:95.25, wind:9.24, pressure:1017.43,
+        monthlyTemp:{5:11.33,6:13.78,7:15.69,8:15.37,9:13.64,10:12.21},
+        monthlyRain:{5:1.67,6:1.67,7:4.9,8:6.47,9:2.81,10:2.15},
+        monthlyCloud:{5:6.44,6:5.5,7:5.94,8:6.26,9:5.0,10:5.68},
+        monthlySun:{5:5.78,6:7.64,7:5.36,8:4.38,9:5.48,10:3.31}}
+    },
+    'Heathrow': {
+      1987: { temp:14.75, tempStd:3.5, rain:3.16, sunshine:4.94, cloud:5.65, humidity:93.25, wind:5.53, pressure:1014.42,
+        monthlyTemp:{5:12.03,6:14.62,7:17.53,8:17.15,9:15.32,10:11.32},
+        monthlyRain:{5:2.2,6:3.18,7:2.67,8:2.29,9:1.68,10:6.47},
+        monthlyCloud:{5:5.68,6:6.37,7:5.81,8:5.23,9:5.4,10:5.45},
+        monthlySun:{5:5.46,6:4.43,7:5.68,8:5.56,9:4.91,10:3.89}},
+      2015: { temp:15.73, tempStd:3.14, rain:2.46, sunshine:5.29, cloud:4.64, humidity:89.49, wind:7.82, pressure:1016.89,
+        monthlyTemp:{5:13.28,6:16.82,7:18.76,8:18.13,9:14.4,10:12.54},
+        monthlyRain:{5:1.52,6:0.58,7:3.59,8:4.87,9:2.27,10:1.59},
+        monthlyCloud:{5:4.12,6:3.5,7:4.29,8:5.81,9:4.3,10:5.68},
+        monthlySun:{5:6.54,6:6.57,7:6.12,8:4.33,9:5.41,10:3.04}}
+    },
+    'Hurn': {
+      1987: { temp:13.8, tempStd:3.55, rain:2.52, sunshine:5.58, cloud:5.41, humidity:96.06, wind:6.6, pressure:1014.86,
+        monthlyTemp:{5:11.34,6:13.65,7:16.47,8:16.05,9:14.42,10:10.39},
+        monthlyRain:{5:0.79,6:2.73,7:2.87,8:1.08,9:1.61,10:5.27},
+        monthlyCloud:{5:5.32,6:5.8,7:5.35,8:4.81,9:5.53,10:5.65},
+        monthlySun:{5:7.44,6:5.72,7:6.65,8:6.18,9:4.86,10:3.63}},
+      2015: { temp:14.19, tempStd:2.93, rain:2.58, sunshine:5.49, cloud:4.56, humidity:93.67, wind:7.53, pressure:1017.13,
+        monthlyTemp:{5:12.02,6:15.1,7:16.77,8:16.17,9:13.33,10:11.32},
+        monthlyRain:{5:2.04,6:1.1,7:2.37,8:4.63,9:2.75,10:2.27},
+        monthlyCloud:{5:5.0,6:4.03,7:4.58,8:5.32,9:3.43,10:5.03},
+        monthlySun:{5:5.6,6:7.69,7:5.98,8:4.38,9:6.68,10:2.75}}
+    },
+    'Leeming': {
+      1987: { temp:12.6, tempStd:3.58, rain:2.49, sunshine:3.87, cloud:6.04, humidity:93.99, wind:6.66, pressure:1013.12,
+        monthlyTemp:{5:9.74,6:12.13,7:15.81,8:15.4,9:13.25,10:8.75},
+        monthlyRain:{5:1.34,6:3.08,7:2.04,8:2.21,9:2.04,10:3.7},
+        monthlyCloud:{5:6.08,6:6.53,7:6.13,8:6.35,9:5.33,10:5.84},
+        monthlySun:{5:4.54,6:3.06,7:4.77,8:3.77,9:4.67,10:2.79}},
+      2015: { temp:12.85, tempStd:3.06, rain:2.36, sunshine:5.21, cloud:5.49, humidity:93.86, wind:7.37, pressure:1015.57,
+        monthlyTemp:{5:10.77,6:13.27,7:15.12,8:15.64,9:11.91,10:9.97},
+        monthlyRain:{5:2.12,6:0.81,7:3.55,8:2.76,9:1.61,10:3.23},
+        monthlyCloud:{5:5.64,6:5.0,7:5.71,8:5.58,9:5.07,10:5.97},
+        monthlySun:{5:6.3,6:6.87,7:5.6,8:5.47,9:4.77,10:2.5}}
+    },
+    'Leuchars': {
+      1987: { temp:11.57, tempStd:3.29, rain:2.77, sunshine:4.87, cloud:6.1, humidity:94.79, wind:7.75, pressure:1011.97,
+        monthlyTemp:{5:9.44,6:10.92,7:14.65,8:14.25,9:11.87,10:7.89},
+        monthlyRain:{5:2.14,6:4.3,7:2.36,8:2.4,9:1.91,10:3.44},
+        monthlyCloud:{5:6.6,6:6.7,7:6.55,8:6.0,9:4.97,10:5.84},
+        monthlySun:{5:4.77,6:4.6,7:5.28,8:5.81,9:5.91,10:2.82}},
+      2015: { temp:12.31, tempStd:2.71, rain:2.14, sunshine:4.85, cloud:5.43, humidity:96.06, wind:8.62, pressure:1013.9,
+        monthlyTemp:{5:9.95,6:12.75,7:14.15,8:14.65,9:12.14,10:9.77},
+        monthlyRain:{5:1.83,6:1.52,7:4.32,8:1.97,9:1.47,10:1.66},
+        monthlyCloud:{5:5.2,6:5.87,7:6.13,8:5.16,9:5.03,10:5.16},
+        monthlySun:{5:6.48,6:5.04,7:4.18,8:5.95,9:4.64,10:3.13}}
+    },
+    'Beijing': {
+      1987: { temp:21.68, tempStd:5.18, rain:3.11, sunshine:null, cloud:null, humidity:null, wind:4.44, pressure:1010.04,
+        monthlyTemp:{5:20.6,6:23.34,7:26.71,8:24.75,9:21.0,10:13.49},
+        monthlyRain:{5:2.38,6:3.08,7:3.46,8:7.95,9:1.17,10:0.43},
+        monthlyCloud:{},monthlySun:{}},
+      2015: { temp:22.7, tempStd:5.24, rain:2.16, sunshine:null, cloud:null, humidity:null, wind:4.19, pressure:1009.93,
+        monthlyTemp:{5:22.22,6:24.73,7:26.79,8:26.65,9:21.02,10:14.7},
+        monthlyRain:{5:1.01,6:1.61,7:3.66,8:2.8,9:3.04,10:0.62},
+        monthlyCloud:{},monthlySun:{}}
+    },
+    'Jacksonville': {
+      1987: { temp:24.7, tempStd:4.07, rain:2.85, sunshine:null, cloud:null, humidity:null, wind:4.94, pressure:1017.57,
+        monthlyTemp:{5:23.05,6:26.54,7:27.32,8:27.94,9:25.49,10:17.62},
+        monthlyRain:{5:0.91,6:3.07,7:2.51,8:4.67,9:5.46,10:0.18},
+        monthlyCloud:{},monthlySun:{}},
+      2015: { temp:25.01, tempStd:2.55, rain:6.07, sunshine:null, cloud:null, humidity:null, wind:5.28, pressure:1016.32,
+        monthlyTemp:{5:24.38,6:26.36,7:26.98,8:26.4,9:24.8,10:21.04},
+        monthlyRain:{5:1.2,6:8.64,7:5.57,8:9.5,9:10.54,10:0.24},
+        monthlyCloud:{},monthlySun:{}}
+    },
+    'Perth': {
+      1987: { temp:15.15, tempStd:2.75, rain:4.06, sunshine:null, cloud:null, humidity:null, wind:6.41, pressure:1020.57,
+        monthlyTemp:{5:14.57,6:15.24,7:13.29,8:13.95,9:16.15,10:17.64},
+        monthlyRain:{5:3.14,6:7.85,7:6.85,8:4.11,9:1.4,10:0.86},
+        monthlyCloud:{},monthlySun:{}},
+      2015: { temp:15.27, tempStd:3.37, rain:5.36, sunshine:null, cloud:null, humidity:null, wind:8.18, pressure:1021.53,
+        monthlyTemp:{5:14.87,6:14.76,7:13.28,8:13.65,9:15.58,10:19.38},
+        monthlyRain:{5:7.03,6:6.43,7:5.94,8:8.16,9:3.53,10:1.37},
+        monthlyCloud:{},monthlySun:{}}
+    }
+  }
+};
+
+const COLORS = {
+  Camborne:'#58a6ff', Heathrow:'#3fb950', Hurn:'#f78166',
+  Leeming:'#ffa657', Leuchars:'#d2a8ff',
+  Beijing:'#79c0ff', Jacksonville:'#56d364', Perth:'#ffb464'
+};
+const C87 = 'rgba(248,81,73,0.85)';
+const C15 = 'rgba(88,166,255,0.85)';
+
+const chartDefaults = {
+  responsive: true,
+  plugins: { legend: { labels: { color:'#8b949e', font:{ size:11 } } } },
+  scales: {
+    x: { ticks: { color:'#8b949e', font:{size:10} }, grid: { color:'rgba(48,54,61,0.6)' } },
+    y: { ticks: { color:'#8b949e', font:{size:10} }, grid: { color:'rgba(48,54,61,0.6)' } }
+  }
+};
+
+let charts = {};
+
+function mkChart(id, config) {
+  if (charts[id]) charts[id].destroy();
+  const ctx = document.getElementById(id).getContext('2d');
+  charts[id] = new Chart(ctx, config);
+  return charts[id];
+}
+
+// ========================
+// OVERVIEW CHARTS
+// ========================
+function buildOverview() {
+  const stations = D.stations;
+  mkChart('chartOverviewTemp', {
+    type: 'bar',
+    data: {
+      labels: stations,
+      datasets: [
+        { label:'1987', data: stations.map(s=>D.data[s][1987].temp), backgroundColor: C87, borderRadius:4 },
+        { label:'2015', data: stations.map(s=>D.data[s][2015].temp), backgroundColor: C15, borderRadius:4 }
+      ]
+    },
+    options: { ...chartDefaults, plugins:{...chartDefaults.plugins, title:{display:true,text:'Mean Temperature °C (May–Oct)',color:'#e6edf3',font:{size:13}}},
+      scales:{...chartDefaults.scales, y:{...chartDefaults.scales.y, title:{display:true,text:'°C',color:'#8b949e'}}} }
+  });
+
+  mkChart('chartOverviewRain', {
+    type: 'bar',
+    data: {
+      labels: stations,
+      datasets: [
+        { label:'1987', data: stations.map(s=>D.data[s][1987].rain), backgroundColor: C87, borderRadius:4 },
+        { label:'2015', data: stations.map(s=>D.data[s][2015].rain), backgroundColor: C15, borderRadius:4 }
+      ]
+    },
+    options: { ...chartDefaults, scales:{...chartDefaults.scales, y:{...chartDefaults.scales.y,title:{display:true,text:'mm/day',color:'#8b949e'}}} }
+  });
+
+  mkChart('chartOverviewWind', {
+    type: 'bar',
+    data: {
+      labels: stations,
+      datasets: [
+        { label:'1987', data: stations.map(s=>D.data[s][1987].wind), backgroundColor: C87, borderRadius:4 },
+        { label:'2015', data: stations.map(s=>D.data[s][2015].wind), backgroundColor: C15, borderRadius:4 }
+      ]
+    },
+    options: { ...chartDefaults, scales:{...chartDefaults.scales, y:{...chartDefaults.scales.y,title:{display:true,text:'knots',color:'#8b949e'}}} }
+  });
+}
+
+// ========================
+// CLOUD CHARTS
+// ========================
+function buildCloud() {
+  const uk = D.ukStations;
+  mkChart('chartCloud1987v2015', {
+    type:'bar',
+    data:{
+      labels: uk,
+      datasets:[
+        { label:'1987', data: uk.map(s=>D.data[s][1987].cloud), backgroundColor:C87, borderRadius:4 },
+        { label:'2015', data: uk.map(s=>D.data[s][2015].cloud), backgroundColor:C15, borderRadius:4 }
+      ]
+    },
+    options:{...chartDefaults, scales:{...chartDefaults.scales, y:{...chartDefaults.scales.y, min:0, max:8, title:{display:true,text:'oktas (0–8)',color:'#8b949e'}}}}
+  });
+
+  buildCloudMonthly();
+  buildCloudRadar();
+}
+
+function buildCloudMonthly() {
+  const uk = D.ukStations;
+  mkChart('chartCloud1987monthly', {
+    type:'bar',
+    data:{
+      labels: D.monthNames,
+      datasets: uk.map(s=>({ label:s, data: D.months.map(m=>D.data[s][1987].monthlyCloud[m]||0), backgroundColor:COLORS[s]+'99', borderRadius:3 }))
+    },
+    options:{...chartDefaults, scales:{...chartDefaults.scales, y:{...chartDefaults.scales.y,min:0,max:8}}}
+  });
+
+  mkChart('chartCloud2015monthly', {
+    type:'bar',
+    data:{
+      labels: D.monthNames,
+      datasets: uk.map(s=>({ label:s, data: D.months.map(m=>D.data[s][2015].monthlyCloud[m]||0), backgroundColor:COLORS[s]+'99', borderRadius:3 }))
+    },
+    options:{...chartDefaults, scales:{...chartDefaults.scales, y:{...chartDefaults.scales.y,min:0,max:8}}}
+  });
+}
+
+function buildCloudRadar() {
+  const uk = D.ukStations;
+  mkChart('chartCloudRadar', {
+    type:'radar',
+    data:{
+      labels: D.monthNames,
+      datasets: uk.map(s=>({
+        label:s,
+        data: D.months.map(m=>D.data[s][2015].monthlyCloud[m]||0),
+        borderColor: COLORS[s], backgroundColor: COLORS[s]+'22', pointBackgroundColor: COLORS[s], borderWidth:2
+      }))
+    },
+    options:{
+      responsive:true,
+      plugins:{ legend:{ labels:{ color:'#8b949e', font:{size:11} } } },
+      scales:{ r:{ min:0, max:8, ticks:{color:'#8b949e', backdropColor:'transparent', font:{size:9}}, grid:{color:'rgba(48,54,61,0.6)'}, angleLines:{color:'rgba(48,54,61,0.6)'}, pointLabels:{color:'#8b949e', font:{size:10}} } }
+    }
+  });
+}
+
+function setCloudMonth(m, btn) {
+  document.querySelectorAll('#page-cloud .toggle-group .toggle-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  // highlight the selected month in context — rebuild
+  buildCloudMonthly();
+}
+
+// ========================
+// TEMP CHARTS
+// ========================
+let tempYear = '1987', tempGroup = 'uk';
+
+function buildTemp() {
+  buildTempLine();
+  buildTempDelta();
+}
+
+function stationsForGroup(g) {
+  if(g==='uk') return D.ukStations;
+  if(g==='intl') return D.intlStations;
+  return D.stations;
+}
+
+function buildTempLine() {
+  const stns = stationsForGroup(tempGroup);
+  let datasets = [];
+  const years = tempYear === 'both' ? [1987,2015] : [parseInt(tempYear)];
+  years.forEach(yr=>{
+    stns.forEach(s=>{
+      datasets.push({
+        label: tempYear==='both' ? `${s} ${yr}` : s,
+        data: D.months.map(m=>D.data[s][yr].monthlyTemp[m]||null),
+        borderColor: tempYear==='both' ? (yr===1987?COLORS[s]+'99':COLORS[s]) : COLORS[s],
+        backgroundColor: 'transparent',
+        borderDash: tempYear==='both'&&yr===1987 ? [4,3] : [],
+        borderWidth: 2, pointRadius:3, tension:0.3
+      });
+    });
+  });
+
+  mkChart('chartTempLine', {
+    type:'line', data:{ labels:D.monthNames, datasets },
+    options:{...chartDefaults, scales:{...chartDefaults.scales, y:{...chartDefaults.scales.y,title:{display:true,text:'°C',color:'#8b949e'}}}}
+  });
+}
+
+function buildTempDelta() {
+  const stns = D.stations;
+  const deltas = stns.map(s=>+(D.data[s][2015].temp - D.data[s][1987].temp).toFixed(2));
+  mkChart('chartTempDelta', {
+    type:'bar',
+    data:{
+      labels: stns,
+      datasets:[{ label:'Temp change (°C)', data:deltas,
+        backgroundColor: deltas.map(d=>d>0?'rgba(63,185,80,0.7)':'rgba(247,129,102,0.7)'), borderRadius:4 }]
+    },
+    options:{...chartDefaults, scales:{...chartDefaults.scales, y:{...chartDefaults.scales.y,title:{display:true,text:'Δ°C',color:'#8b949e'}}}}
+  });
+}
+
+function setTempYear(y, btn) {
+  document.querySelectorAll('#page-temp .controls .toggle-group:first-child .toggle-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  tempYear = y; buildTempLine();
+}
+function setTempGroup(g, btn) {
+  document.querySelectorAll('#page-temp .controls .toggle-group:last-child .toggle-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  tempGroup = g; buildTempLine();
+}
+
+// ========================
+// RAIN CHARTS
+// ========================
+let rainYear = '1987';
+
+function buildRain() {
+  buildRainBar();
+  buildRainUK();
+  buildRainGlobal();
+}
+
+function buildRainBar() {
+  const stns = D.stations;
+  const yr = parseInt(rainYear);
+  mkChart('chartRainBar', {
+    type:'bar',
+    data:{
+      labels: D.monthNames,
+      datasets: stns.map(s=>({ label:s, data:D.months.map(m=>D.data[s][yr].monthlyRain[m]||0), backgroundColor:COLORS[s]+'bb', borderRadius:3 }))
+    },
+    options:{...chartDefaults, scales:{...chartDefaults.scales, y:{...chartDefaults.scales.y,title:{display:true,text:'mm/day',color:'#8b949e'}}}}
+  });
+}
+
+function buildRainUK() {
+  const uk = D.ukStations;
+  mkChart('chartRainUK', {
+    type:'bar',
+    data:{
+      labels: uk,
+      datasets:[
+        {label:'1987', data:uk.map(s=>D.data[s][1987].rain), backgroundColor:C87, borderRadius:4},
+        {label:'2015', data:uk.map(s=>D.data[s][2015].rain), backgroundColor:C15, borderRadius:4}
+      ]
+    },
+    options:{...chartDefaults, scales:{...chartDefaults.scales, y:{...chartDefaults.scales.y,title:{display:true,text:'mm/day',color:'#8b949e'}}}}
+  });
+}
+
+function buildRainGlobal() {
+  const all = D.stations;
+  mkChart('chartRainGlobal', {
+    type:'bar',
+    data:{
+      labels: all,
+      datasets:[
+        {label:'1987', data:all.map(s=>D.data[s][1987].rain), backgroundColor:C87, borderRadius:4},
+        {label:'2015', data:all.map(s=>D.data[s][2015].rain), backgroundColor:C15, borderRadius:4}
+      ]
+    },
+    options:{...chartDefaults, scales:{...chartDefaults.scales, y:{...chartDefaults.scales.y,title:{display:true,text:'mm/day',color:'#8b949e'}}}}
+  });
+}
+
+function setRainYear(y, btn) {
+  document.querySelectorAll('#page-rain .controls .toggle-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  rainYear = y; buildRainBar();
+}
+
+// ========================
+// SUNSHINE CHARTS
+// ========================
+function buildSunshine() {
+  const uk = D.ukStations;
+  mkChart('chartSunshine', {
+    type:'line',
+    data:{
+      labels: D.monthNames,
+      datasets: uk.map(s=>({
+        label:s, data:D.months.map(m=>D.data[s][2015].monthlySun[m]||null),
+        borderColor:COLORS[s], backgroundColor:COLORS[s]+'11', fill:true, tension:0.3, borderWidth:2, pointRadius:3
+      }))
+    },
+    options:{...chartDefaults, scales:{...chartDefaults.scales, y:{...chartDefaults.scales.y,title:{display:true,text:'hrs/day',color:'#8b949e'}}}}
+  });
+  updateSunVsCloud();
+}
+
+function updateSunVsCloud() {
+  const s = document.getElementById('sunCloudStation').value;
+  const cloudVals = D.months.map(m=>D.data[s][2015].monthlyCloud[m]||null);
+  const sunVals = D.months.map(m=>D.data[s][2015].monthlySun[m]||null);
+  const pts = D.months.map((m,i)=>({x:cloudVals[i], y:sunVals[i], label:D.monthNames[i]}));
+
+  mkChart('chartSunVsCloud', {
+    type:'scatter',
+    data:{ datasets:[{
+      label: `${s} 2015 (monthly means)`,
+      data: pts,
+      backgroundColor: COLORS[s]+'cc',
+      pointRadius: 7, pointHoverRadius:9
+    }]},
+    options:{
+      ...chartDefaults,
+      plugins:{ ...chartDefaults.plugins,
+        tooltip:{ callbacks:{ label: ctx=>`${ctx.raw.label}: cloud=${ctx.raw.x} oktas, sun=${ctx.raw.y} hrs` } }
+      },
+      scales:{
+        x:{...chartDefaults.scales.x, title:{display:true,text:'Cloud Cover (oktas)',color:'#8b949e'}, min:0, max:8},
+        y:{...chartDefaults.scales.y, title:{display:true,text:'Sunshine (hrs/day)',color:'#8b949e'}}
+      }
+    }
+  });
+}
+
+// ========================
+// COMPARE PAGE
+// ========================
+function buildCompare() {
+  // Table
+  const body = document.getElementById('compareTableBody');
+  body.innerHTML = '';
+  D.stations.forEach(s=>{
+    [1987,2015].forEach(yr=>{
+      const d = D.data[s][yr];
+      const isUK = D.ukStations.includes(s);
+      const row = document.createElement('tr');
+      const typePill = isUK ? `<span class="pill pill-blue">🇬🇧 UK</span>` : `<span class="pill pill-orange">🌍 Intl</span>`;
+      const na = '<span style="color:var(--muted)">—</span>';
+      row.innerHTML = `
+        <td><strong>${s}</strong></td>
+        <td><span class="pill ${yr===2015?'pill-blue':'pill-red'}">${yr}</span></td>
+        <td>${typePill}</td>
+        <td>${d.temp}</td>
+        <td>${d.tempStd}</td>
+        <td>${d.rain}</td>
+        <td>${d.sunshine !== null ? d.sunshine : na}</td>
+        <td>${d.cloud !== null ? d.cloud : na}</td>
+        <td>${d.humidity !== null ? d.humidity : na}</td>
+        <td>${d.wind}</td>
+        <td>${d.pressure}</td>
+      `;
+      body.appendChild(row);
+    });
+  });
+
+  // Scatter: cloud vs sunshine
+  const uk = D.ukStations;
+  const pts = [];
+  uk.forEach(s=>{
+    D.months.forEach(m=>{
+      const c = D.data[s][2015].monthlyCloud[m];
+      const su = D.data[s][2015].monthlySun[m];
+      if(c && su) pts.push({x:c, y:su, label:`${s} ${D.monthNames[D.months.indexOf(m)]}`});
+    });
+  });
+
+  mkChart('chartScatterCloud', {
+    type:'scatter',
+    data:{ datasets: uk.map(s=>({
+      label:s,
+      data: D.months.map(m=>{
+        const c=D.data[s][2015].monthlyCloud[m], su=D.data[s][2015].monthlySun[m];
+        return (c&&su)?{x:c,y:su,label:`${s} ${D.monthNames[D.months.indexOf(m)]}`}:null;
+      }).filter(Boolean),
+      backgroundColor:COLORS[s]+'cc', pointRadius:6
+    }))},
+    options:{
+      ...chartDefaults,
+      plugins:{...chartDefaults.plugins, tooltip:{callbacks:{label:ctx=>`${ctx.raw.label}: (${ctx.raw.x}, ${ctx.raw.y})`}}},
+      scales:{
+        x:{...chartDefaults.scales.x,title:{display:true,text:'Cloud (oktas)',color:'#8b949e'},min:2,max:8},
+        y:{...chartDefaults.scales.y,title:{display:true,text:'Sunshine (hrs)',color:'#8b949e'}}
+      }
+    }
+  });
+}
+
+// ========================
+// NAV
+// ========================
+const pageBuilders = {
+  overview: buildOverview,
+  cloud: buildCloud,
+  temp: buildTemp,
+  rain: buildRain,
+  sunshine: buildSunshine,
+  compare: buildCompare,
+  examtips: ()=>{}
+};
+
+const built = {};
+
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  event.target.classList.add('active');
+  if(!built[id]) { pageBuilders[id](); built[id]=true; }
+}
+
+// Init
+buildOverview();
+built.overview = true;
+</script>
+</body>
+</html>
